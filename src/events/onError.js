@@ -5,11 +5,13 @@ import { handlerError } from '../utils/error/errorHandler.js';
 
 const onError = (socket) => (error) => {
   console.error(`소켓 에러: ${error}, ${socket.remoteAddress}:${socket.remotePort}`);
-  handlerError(socket, new CustomError(500, `소켓 에러: ${err.message}`));
+  handlerError(socket, new CustomError(500, `소켓 에러: ${error.message}`));
 
   const user = removeUser(socket);
 
   const gameSession = getGameSession();
   gameSession.removeUser(user.id);
+
+  updateLastLocation(user.id, user.x, user.y);
 };
 export default onError;
