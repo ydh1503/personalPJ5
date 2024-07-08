@@ -1,31 +1,12 @@
-import {
-  createLocationPacket,
-  gameStartNotification,
-} from '../../utils/notification/game.notification.js';
-import IntervalManager from '../managers/interval.manager.js';
-
-const MAX_PLAYERS = 2;
+import { createLocationPacket } from '../../utils/notification/game.notification.js';
 
 class Game {
-  constructor(id) {
-    this.id = id;
+  constructor() {
     this.users = [];
-    this.intervalManger = new IntervalManager();
-    this.state = 'waiting'; // 'waiting', 'inProgress'
   }
 
   addUser(user) {
-    if (this.users.length >= MAX_PLAYERS) {
-      throw new Error('Game session is full');
-    }
     this.users.push(user);
-
-    this.intervalManger.addPlayer(user.id, user.ping.bind(user), 1000);
-    if (this.users.length === MAX_PLAYERS) {
-      setTimeout(() => {
-        this.startGame();
-      }, 3000);
-    }
   }
 
   getUser(userId) {
@@ -34,38 +15,17 @@ class Game {
 
   removeUser(userId) {
     this.users = this.users.filter((user) => user.id !== userId);
-    this.intervalManger.removePlayer(userId);
-
-    if (this.users.length < MAX_PLAYERS) {
-      this.state = 'waiting';
-    }
   }
 
-  getMaxLatency() {
-    let maxLatency = 0;
-    this.users.forEach((user) => {
-      maxLatency = Math.max(maxLatency, user.latency);
+  getAllLocation(userId) {
+    const latency = this.getUser(userId).latency;
+
+    const users = this.users.filter((user) => user.id !== userId);
+    const locationData = users.map((user) => {
+      const { x, y } = user.calculatePosition(latency);
+      return { id: user.id, playerId: user.playerId, x, y };
     });
-    return maxLatency;
-  }
-
-  startGame() {
-    this.state = 'inProgress';
-    const startPacket = gameStartNotification(this.id, Date.now());
-    console.log(this.getMaxLatency());
-
-    this.users.forEach((user) => {
-      user.socket.write(startPacket);
-    });
-  }
-
-  getAllLocation() {
-    const maxLatency = this.getMaxLatency();
-
-    const locationData = this.users.map((user) => {
-      const { x, y } = user.calculatePosition(maxLatency);
-      return { id: user.id, x, y };
-    });
+    if (!locationData) return;
     return createLocationPacket(locationData);
   }
 }

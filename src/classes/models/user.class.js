@@ -1,47 +1,37 @@
-import { createPingPacket } from '../../utils/notification/game.notification.js';
-
 class User {
-  constructor(id, socket) {
+  constructor(id, playerId, socket) {
     this.id = id;
+    this.playerId = playerId;
     this.socket = socket;
     this.x = 0;
     this.y = 0;
-    this.sequence = 0;
+    this.dx = 0;
+    this.dy = 0;
     this.lastUpdateTime = Date.now();
     this.latency = 0;
   }
 
   updatePosition(x, y) {
+    this.dx = x - this.x;
+    this.dy = y - this.y;
     this.x = x;
     this.y = y;
     this.lastUpdateTime = Date.now();
   }
 
-  getNextSequence() {
-    return ++this.sequence;
-  }
-
-  ping() {
-    const now = Date.now();
-
-    console.log(`[${this.id}] ping`);
-    this.socket.write(createPingPacket(now));
-  }
-
-  handlePong(data) {
-    const now = Date.now();
-    this.latency = (now - data.timestamp) / 2;
-    console.log(`Received pong from user ${this.id} at ${now} with latency ${this.latency}ms`);
+  setLatency(latency) {
+    this.latency = latency;
   }
 
   calculatePosition(latency) {
     const timeDiff = latency / 1000; // 초 단위
-    const speed = 1;
+    const speed = 3;
     const distance = speed * timeDiff;
+    const theta = Math.atan2(this.dy, this.dx);
 
     return {
-      x: this.x + distance,
-      y: this.y,
+      x: this.x + Math.cos(theta) * distance,
+      y: this.y + Math.sin(theta) * distance,
     };
   }
 }

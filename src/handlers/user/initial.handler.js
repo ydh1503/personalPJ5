@@ -1,22 +1,28 @@
 import { HANDLER_IDS, RESPONSE_SUCCESS_CODE } from '../../constants/handlerIds.js';
-import { createUser, findUserByDeviceId, updateUserLogin } from '../../db/user/user.db.js';
+import { getGameSession } from '../../session/game.session.js';
 import { addUser } from '../../session/user.session.js';
+import CustomError from '../../utils/error/customError.js';
+import { ErrorCodes } from '../../utils/error/errorCodes.js';
 import { handlerError } from '../../utils/error/errorHandler.js';
 import { createResponse } from '../../utils/response/create.Response.js';
 
 const initialHandler = async ({ socket, userId, payload }) => {
   try {
-    const { deviceId } = payload;
+    const { deviceId, playerId, latency } = payload;
 
-    let user = await findUserByDeviceId(deviceId);
+    const user = addUser(socket, deviceId, playerId);
+    user.setLatency(latency);
 
-    if (!user) {
-      user = await createUser(deviceId);
-    } else {
-      await updateUserLogin(user.id);
+    const gameSession = getGameSession();
+
+    if (!gameSession) {
+      throw new CustomError(ErrorCodes.GAME_NOT_FOUND, '게임 세션을 찾을 수 없습니다.');
     }
 
-    addUser(socket, user.id);
+    const existUser = gameSession.getUser(user.id);
+    if (!existUser) {
+      gameSession.addUser(user);
+    }
 
     const initialResponse = createResponse(
       HANDLER_IDS.INIT,
@@ -25,7 +31,6 @@ const initialHandler = async ({ socket, userId, payload }) => {
       deviceId,
     );
 
-    // 어떠한 처리가 끝났을 때 보내는 것
     socket.write(initialResponse);
   } catch (e) {
     handlerError(socket, e);

@@ -1,4 +1,4 @@
-import { config } from '../../config/config.js';
+import config from '../../config/config.js';
 import { PACKET_TYPE } from '../../constants/header.js';
 import { getProtoMessages } from '../../init/loadProtos.js';
 

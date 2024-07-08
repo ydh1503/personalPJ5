@@ -1,11 +1,10 @@
-import pools from '../db/database.js';
-import { testAllConnections } from '../utils/db/testConnection.js';
+import { createGameSession } from '../session/game.session.js';
 import { loadProtos } from './loadProtos.js';
 
 const initServer = async () => {
   try {
     await loadProtos();
-    await testAllConnections(pools);
+    createGameSession();
   } catch (e) {
     console.error(e);
     process.exit(1);
